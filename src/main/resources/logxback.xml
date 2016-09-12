@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+   <!-- <include resource="org/springframework/boot/logging/logback/base.xml"/>-->
+   <!-- <logger name="org.nbme" level="INFO"/>-->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+
+            <Pattern>%d{dd MMM yyyy HH:mm:ss} %-5level %logger %L - %msg %n
+            </Pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/vcauaa.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>${LOG_HOME}/vcauaa.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+            <!-- keep 30 days' worth of history -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <Pattern>%d{dd MMM yyyy HH:mm:ss} %-5level %logger %L - %msg %n
+            </Pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.apache" level="ERROR" />
+    <logger name="org.nbme.vca" level="DEBUG" />
+
+
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>
