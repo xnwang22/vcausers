@@ -19,20 +19,55 @@
  ******************************************************************************/
 package org.nbme.vca.users.utils;
 
+import java.nio.charset.Charset;
+import java.util.Base64;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
 import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.nimbusds.openid.connect.sdk.AuthenticationResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.Map;
 
 public final class AuthHelper {
 
     public static final String PRINCIPAL_SESSION_NAME = "principal";
 
-    private AuthHelper() {
-    }
-
+//    private AuthHelper() {
+//    }
+//
+//    public static boolean isAuthenticated(HttpServletRequest request) {
+//        return request.getSession().getAttribute(PRINCIPAL_SESSION_NAME) != null;
+//    }
+//
+//    public static AuthenticationResult getAuthSessionObject(
+//            HttpServletRequest request) {
+//        return (AuthenticationResult) request.getSession().getAttribute(
+//                PRINCIPAL_SESSION_NAME);
+//    }
+//
+//    public static boolean containsAuthenticationData(
+//            HttpServletRequest httpRequest) {
+//        Map<String, String[]> map = httpRequest.getParameterMap();
+////        return httpRequest.getMethod().equalsIgnoreCase("POST") && (httpRequest.getParameterMap().containsKey(
+////                        AuthParameterNames.ERROR)
+////                        || httpRequest.getParameterMap().containsKey(
+////                                AuthParameterNames.ID_TOKEN) || httpRequest
+////                        .getParameterMap().containsKey(AuthParameterNames.CODE));
+////    }
+////
+////    public static boolean isAuthenticationSuccessful(
+////            AuthenticationResponse authResponse) {
+////        return authResponse instanceof AuthenticationSuccessResponse;
+////    }
+//        return true;
+//    }
+//
+//	public static boolean isAuthenticationSuccessful(AuthenticationResponse authResponse) {
+//		// TODO Auto-generated method stub
+//		return false;
+//	}
+    
     public static boolean isAuthenticated(HttpServletRequest request) {
         return request.getSession().getAttribute(PRINCIPAL_SESSION_NAME) != null;
     }
@@ -46,6 +81,8 @@ public final class AuthHelper {
     public static boolean containsAuthenticationData(
             HttpServletRequest httpRequest) {
         Map<String, String[]> map = httpRequest.getParameterMap();
+        
+        
         return httpRequest.getMethod().equalsIgnoreCase("POST") && (httpRequest.getParameterMap().containsKey(
                         AuthParameterNames.ERROR)
                         || httpRequest.getParameterMap().containsKey(
@@ -57,4 +94,25 @@ public final class AuthHelper {
             AuthenticationResponse authResponse) {
         return authResponse instanceof AuthenticationSuccessResponse;
     }
+    
+    public static String[] processBasicHeader(HttpServletRequest httpRequest)
+    {
+    	
+    	String credential = null;
+    	String authorization = httpRequest.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Basic")) {
+            // Authorization: Basic base64credentials
+            String base64Credentials = authorization.substring("Basic".length()).trim();
+            String credentials = new String(Base64.getDecoder().decode(base64Credentials),Charset.forName("UTF-8"));
+            // credentials = username:password
+            String[] values = credentials.split(":",2);
+            return values;
+        }
+        else{
+        	return new String[0];
+        }
+    }
+        
+           
+    
 }

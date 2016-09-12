@@ -1,8 +1,8 @@
 package org.nbme.vca.users.services.impl;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import org.nbme.vca.users.model.AdUserRole;
+import org.nbme.vca.users.model.AdUserRolesResponse;
 import org.nbme.vca.users.model.VcaUserRole;
 import org.nbme.vca.users.services.HttpHeadersService;
 import org.nbme.vca.users.services.VcaUserRolesService;
@@ -39,30 +39,6 @@ public class VcaUserRolesServiceImpl implements VcaUserRolesService {
 
     private EnumMap<VcaUserRole, AdUserRole> userRoleMap = new EnumMap<>(VcaUserRole.class);
 
-    static class AdUserRolesResponse
-    {
-        @JsonProperty("odata.metadata")
-        private String odataMetadata;
-        @JsonProperty("value")
-        private List<AdUserRole> adUserRoles;
-
-
-        public List<AdUserRole> getAdUserRoles() {
-            return adUserRoles;
-        }
-
-        public void setAdUserRoles(List<AdUserRole> adUserRoles) {
-            this.adUserRoles = adUserRoles;
-        }
-
-        public String getOdataMetadata() {
-            return odataMetadata;
-        }
-
-        public void setOdataMetadata(String odataMetadata) {
-            this.odataMetadata = odataMetadata;
-        }
-    }
 
     @Override
     public List<AdUserRole> getRoles() {
@@ -95,7 +71,7 @@ public class VcaUserRolesServiceImpl implements VcaUserRolesService {
     }
 
     @Override
-    @Cacheable(key = "", sync = true, cacheNames = {"userRoleCache"})
+//    @Cacheable(key = "", sync = true, cacheNames = {"userRoleCache"})
     public String getUserRoleOid(String roleName) {
         VcaUserRole role = VcaUserRole.ADMIN.valueOf(roleName.toUpperCase());
         if(userRoleMap.containsKey(role))

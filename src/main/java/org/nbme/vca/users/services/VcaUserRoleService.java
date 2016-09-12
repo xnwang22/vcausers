@@ -1,6 +1,5 @@
 package org.nbme.vca.users.services;
 
-import org.nbme.vca.users.model.AdUserRole;
 import org.nbme.vca.users.model.VcaUserRole;
 
 import java.util.List;
@@ -14,5 +13,5 @@ public interface VcaUserRoleService {
     VcaUserRole getUserRole(String userName);
     List<VcaUserRole> getUserRoles(String userName);
 
-    List<AdUserRole> getRoles();
+    void updateUserRole(String userName, String fromGroupName, String toGroupName);
 }

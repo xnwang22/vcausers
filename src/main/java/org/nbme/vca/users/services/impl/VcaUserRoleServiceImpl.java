@@ -2,6 +2,7 @@ package org.nbme.vca.users.services.impl;
 
 import com.google.common.collect.ImmutableMap;
 import org.nbme.vca.users.model.AdUserRole;
+import org.nbme.vca.users.model.AdUserRolesResponse;
 import org.nbme.vca.users.model.UrlObject;
 import org.nbme.vca.users.model.VcaUserRole;
 import org.nbme.vca.users.services.HttpHeadersService;
@@ -21,8 +22,8 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by rwang on 8/17/2016.
@@ -31,6 +32,7 @@ import java.util.List;
 public class VcaUserRoleServiceImpl implements VcaUserRoleService {
     private static Logger logger = LoggerFactory.getLogger(VcaUserRoleServiceImpl.class);
     @Autowired
+//    @Qualifier("restTemplate")
     private RestTemplate restTemplate;
     @Autowired
     private ImmutableMap<String, String> activeDirectoryConfig;
@@ -47,8 +49,8 @@ public class VcaUserRoleServiceImpl implements VcaUserRoleService {
     RestOperation<String, String> deleteUserRoleOperation = (String url, HttpMethod method, HttpEntity<String> httpEntity) ->
     {ResponseEntity<String> responseEntity = restTemplate.exchange(url, method, httpEntity, String.class); return responseEntity.getBody();};
     // get
-    RestOperation<String, String> getUserRoleOperation = (String url, HttpMethod method, HttpEntity<String> httpEntity) ->
-    {ResponseEntity<String> responseEntity = restTemplate.exchange(url, method, httpEntity, String.class); return responseEntity.getBody();};
+    RestOperation<String, List<AdUserRole>> getUserRoleOperation = (String url, HttpMethod method, HttpEntity<String> httpEntity) ->
+    {List<AdUserRole> responseEntity = restTemplate.exchange(url, method, httpEntity, AdUserRolesResponse.class).getBody().getAdUserRoles(); return responseEntity;};
 
     @Override
     public String addUserRole(String userName, String vcaUserRole) {
@@ -98,6 +100,7 @@ public class VcaUserRoleServiceImpl implements VcaUserRoleService {
             }
 
         }
+
         @Override
         public VcaUserRole getUserRole(String userName) {
             List<VcaUserRole> userRoles = getUserRoles(userName);
@@ -110,12 +113,13 @@ public class VcaUserRoleServiceImpl implements VcaUserRoleService {
             String userOid = vcaUsersService.getUserOid(userName);
             HttpEntity<String> httpEntity = new HttpEntity<>("", headers);
             String url = activeDirectoryConfig.get("USER_EP");
-
+            url = url.replace("?api-version=1.6", "/" + userOid + "/memberOf?api-version=1.6");
             logger.debug("user url ={}", url);
             try {
-                String result = RestOperation.invoke(url, HttpMethod.GET, httpEntity, getUserRoleOperation);
+                List<AdUserRole> result = RestOperation.invoke(url, HttpMethod.GET, httpEntity, getUserRoleOperation);
                 logger.debug("return string = {}", result );
-                return new ArrayList<>();//VcaUserRole.valueOf(result);
+
+                return result.stream().map(e -> VcaUserRole.valueOf(e.getDisplayName().toUpperCase())).collect(Collectors.toList());
 
             } catch (HttpClientErrorException | HttpServerErrorException e) {
                 logger.error(e.getResponseBodyAsString());
@@ -123,8 +127,9 @@ public class VcaUserRoleServiceImpl implements VcaUserRoleService {
             }
         }
 
-        @Override
-        public List<AdUserRole> getRoles() {
-            return null;
-        }
+    @Override
+    public void updateUserRole(String userName, String fromGroupName, String toGroupName) {
+        deleteUserRole(userName, fromGroupName);
+        addUserRole(userName, toGroupName);
+    }
 }

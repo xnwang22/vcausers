@@ -45,13 +45,18 @@ public class VcaUsersServiceImpl implements VcaUsersService {
     }
 
     @Override
-    @Cacheable(sync = true, cacheNames = {"userPrincipleCache"})
+    @Cacheable( cacheNames = {"userPrincipleCache"})
     public String getUserPrinciple(String userName) {
-        return userMap.get(userName).getUserPrincipalName();
+        if(userMap.containsKey(userName))
+            return userMap.get(userName).getUserPrincipalName();
+        else {
+            userMap = getUserMap();
+            return userMap.get(userName).getUserPrincipalName();
+        }
     }
 
     @Override
-    @Cacheable(sync = true, cacheNames = {"userOidCache"})
+    @Cacheable( cacheNames = {"userOidCache"})
     public String getUserOid(String userName) {
         if(userMap.containsKey(userName))
             return userMap.get(userName).getObjectId();

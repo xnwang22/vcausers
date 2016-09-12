@@ -1,12 +1,15 @@
 package org.nbme.vca.users.services.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
+import org.nbme.vca.users.config.AdConfig;
 import org.nbme.vca.users.model.AdUser;
+import org.nbme.vca.users.model.Vca2AdUser;
 import org.nbme.vca.users.model.VcaUser;
 import org.nbme.vca.users.model.VcaUserRole;
+import org.nbme.vca.users.repo.VcaUserRepo;
 import org.nbme.vca.users.services.HttpHeadersService;
 import org.nbme.vca.users.services.VcaUserService;
+import org.nbme.vca.users.services.VcaUsersService;
 import org.nbme.vca.users.utils.RestOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,18 +34,25 @@ public class VcaUserServiceImpl implements VcaUserService {
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
-    private ImmutableMap<String, String> activeDirectoryConfig;
+    private AdConfig activeDirectoryConfig;
     @Autowired
     HttpHeadersService httpHeadersService;
+    @Autowired
+    VcaUsersService vcaUsersService;
+    @Autowired
+    VcaUserRepo vcaUserRepo;
+
+  /*  private RestOperation<VcaUser, AdUser>  createUserOperation = (String url, HttpMethod method, HttpEntity<VcaUser> httpEntity) ->
+    {ResponseEntity<AdUser> responseEntity = restTemplate.postForEntity(url, httpEntity, AdUser.class); return responseEntity.getBody();};*/
     // get users Rest operation
     private RestOperation<String, List<AdUser>> getUsersOperation = (String url, HttpMethod method, HttpEntity<String> httpEntity) ->
     {List<AdUser> responses = restTemplate.exchange(url, method, httpEntity, AdUserResponse.class).getBody().getUsers(); return responses;};
+
     static class AdUserResponse {
         @JsonProperty("odata.metadata")
         private String odataMetadata;
         @JsonProperty("value")
         private List<AdUser> users;
-
 
         public List<AdUser> getUsers() {
             return users;
@@ -62,14 +72,14 @@ public class VcaUserServiceImpl implements VcaUserService {
     }
 
     @Override
-    public AdUser addUser(VcaUser user) {
-        RestOperation<VcaUser, AdUser>  createUserOperation = (String url, HttpMethod method, HttpEntity<VcaUser> httpEntity) ->
+    public AdUser addUser(Vca2AdUser user) {
+        RestOperation<Vca2AdUser, AdUser>  createUserOperation = (String url, HttpMethod method, HttpEntity<Vca2AdUser> httpEntity) ->
         {ResponseEntity<AdUser> responseEntity = restTemplate.postForEntity(url, httpEntity, AdUser.class); return responseEntity.getBody();};
 
         HttpHeaders headers = httpHeadersService.createHttpHeaders();
-
-        HttpEntity<VcaUser> httpEntity = new HttpEntity<>(user, headers);
-        String url = activeDirectoryConfig.get("USER_EP");
+        
+        HttpEntity<Vca2AdUser> httpEntity = new HttpEntity<>(user, headers);
+        String url = activeDirectoryConfig.getUserEp();
         logger.debug("user url ={}", url);
         try {
             return RestOperation.invoke(url,  HttpMethod.POST, httpEntity, createUserOperation);//restTemplate.postForEntity(url,  httpEntity, AdUser.class);
@@ -85,8 +95,7 @@ public class VcaUserServiceImpl implements VcaUserService {
     @Override
     public void deleteUser(String userName) {
         HttpHeaders headers = httpHeadersService.createHttpHeaders();
-
-        String url = activeDirectoryConfig.get("USER_EP");
+        String url = activeDirectoryConfig.getUserEp();
         url = url.replace("?api-version=1.6", "/" + userName + "?api-version=1.6");
         logger.debug("user url = {}", url);
         HttpEntity<String> httpEntity = new HttpEntity<>("", headers);
@@ -97,19 +106,37 @@ public class VcaUserServiceImpl implements VcaUserService {
             logger.error(e.getResponseBodyAsString());
             throw e;
         }
+    }
+
+    @Override
+    public AdUser updateUser(Vca2AdUser user) {
+        HttpHeaders headers = httpHeadersService.createHttpHeaders();
+
+        HttpEntity<Vca2AdUser> httpEntity = new HttpEntity<>(user, headers);
+        String url = activeDirectoryConfig.getUserEp();
+        
+        url = url.replace("?api-version=1.6", "/" + vcaUsersService.getUserPrinciple(user.getDisplayName()) + "?api-version=1.6"); // TO add user principle
+        logger.debug("user url ={}", url);
+        try {
+            ResponseEntity<AdUser> response = restTemplate.exchange(url, HttpMethod.PUT, httpEntity, AdUser.class);
+            return response.getBody();
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            logger.error(e.getResponseBodyAsString());
+            throw e;
+        }
 
     }
 
     @Override
-    public AdUser updateUser(VcaUser user) {
+    public AdUser patchUser(String userName, String patchJsonString) {
         HttpHeaders headers = httpHeadersService.createHttpHeaders();
 
-        HttpEntity<VcaUser> httpEntity = new HttpEntity<>(user, headers);
-        String url = activeDirectoryConfig.get("USER_EP");
-        url = url.replace("?api-version=1.6", "/" + "32d3332d-81be-4a05-81a2-21c87a4d1dc4@vcab2cnbme.onmicrosoft.com" + "?api-version=1.6"); // TO add user principle
+        HttpEntity<String> httpEntity = new HttpEntity<>(patchJsonString, headers);
+        String url = activeDirectoryConfig.getUserEp();
+        url = url.replace("?api-version=1.6", "/" + vcaUsersService.getUserPrinciple(userName) + "?api-version=1.6"); // TO add user principle
         logger.debug("user url ={}", url);
         try {
-            ResponseEntity<AdUser> response = restTemplate.exchange(url, HttpMethod.PUT, httpEntity, AdUser.class);
+            ResponseEntity<AdUser> response = restTemplate.exchange(url, HttpMethod.PATCH, httpEntity, AdUser.class);
             return response.getBody();
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             logger.error(e.getResponseBodyAsString());
@@ -123,7 +150,7 @@ public class VcaUserServiceImpl implements VcaUserService {
         HttpHeaders headers = httpHeadersService.createHttpHeaders();
 
         HttpEntity<String> httpEntity = new HttpEntity<>("", headers);
-        String url = activeDirectoryConfig.get("USER_EP");
+        String url = activeDirectoryConfig.getUserEp();
 
         logger.debug("user url ={}", url);
         try {
@@ -137,7 +164,7 @@ public class VcaUserServiceImpl implements VcaUserService {
     }
 
     @Override
-    public void updateUserRole(VcaUser vcaUser, VcaUserRole vcaUserRole) {
+    public void updateUserRole(Vca2AdUser vcaUser, VcaUserRole vcaUserRole) {
 
     }
 
@@ -146,8 +173,12 @@ public class VcaUserServiceImpl implements VcaUserService {
         HttpHeaders headers = httpHeadersService.createHttpHeaders();
 
         HttpEntity<String> httpEntity = new HttpEntity<>("", headers);
-        String url = activeDirectoryConfig.get("USER_EP");
-        url = url.replace("?api-version=1.6", "/" + userName + "?api-version=1.6");
+        String url = activeDirectoryConfig.getUserEp();
+        VcaUser vcaUser = vcaUserRepo.findByUName(userName);
+        if(vcaUser == null)
+            throw new IllegalArgumentException(userName + " not found");
+
+        url = url.replace("?api-version=1.6", "/" + vcaUser.getAdUser() + "?api-version=1.6");
         logger.debug("user url ={}", url);
         try {
             ResponseEntity<AdUser> response = restTemplate.exchange(url, HttpMethod.GET, httpEntity, AdUser.class);

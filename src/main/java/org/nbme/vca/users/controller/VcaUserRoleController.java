@@ -1,6 +1,8 @@
 package org.nbme.vca.users.controller;
 
+import org.nbme.vca.users.model.VcaUser;
 import org.nbme.vca.users.model.VcaUserRole;
+import org.nbme.vca.users.repo.VcaUserRepo;
 import org.nbme.vca.users.services.VcaUserRoleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 /**
@@ -24,43 +27,78 @@ import java.util.List;
 //@RequestMapping(value = "/userRole")
 public class VcaUserRoleController {
     private static final Logger logger = LoggerFactory.getLogger(VcaUserRoleController.class);
-    private final static String AUTHORITY = "https://login.microsoftonline.com/common/";
-    private final static String CLIENT_ID = "b9661f75-6a84-4049-a041-ce0377c37f5c";//"c3d4c489-9be6-4a8d-a5a7-6fc47ca3d2c5";
-    private final static String USERNAME = "rwang@rwangtempnbme.onmicrosoft.com";
-    private final static String PASSWORD = "Nbme123$";
 
     @Autowired
     private VcaUserRoleService vcaUserRoleService;
+    @Autowired
+    private VcaUserRepo vcaUserRepo;
 
     @RequestMapping(value = "/userRole/{userName}/{groupName}", method = RequestMethod.POST, produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity addUserrole(@PathVariable String userName, @PathVariable String groupName, HttpServletRequest request, Model model) throws Exception {
+    public ResponseEntity addUserrole(@PathVariable String userName, @PathVariable String groupName, HttpServletResponse response, Model model) throws Exception {
         {
 
-          vcaUserRoleService.addUserRole(userName, groupName);
+            vcaUserRoleService.addUserRole(userName, groupName);
+            VcaUser vcaUser = vcaUserRepo.findByUName(userName);
+            if (vcaUser == null) {
+                response.setStatus(HttpStatus.NOT_FOUND.value());
+                return null;
+            }
+            vcaUser.getRoles().add(groupName);
+            vcaUserRepo.save(vcaUser);
+            logger.info("User {} role {} added ", userName, groupName);
             return new ResponseEntity("ok", HttpStatus.OK);
         }
     }
 
 
     @RequestMapping(value = "/userRole/{userName}/{groupName}", method = RequestMethod.DELETE, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity deleteUserRole(@PathVariable String userName, @PathVariable String groupName, HttpServletRequest request, Model model) throws Exception {
+    public ResponseEntity deleteUserRole(@PathVariable String userName, @PathVariable String groupName, HttpServletResponse response, Model model) throws Exception {
         {
-
+           VcaUserRole.valueOf(groupName.toUpperCase());
             vcaUserRoleService.deleteUserRole(userName, groupName);
+            VcaUser vcaUser = vcaUserRepo.findByUName(userName);
+            if (vcaUser == null) {
+                response.setStatus(HttpStatus.NOT_FOUND.value());
+                return null;
+            }
+            vcaUser.getRoles().remove(groupName);
+            vcaUserRepo.save(vcaUser);
+            logger.info("User {} role {} removed ", userName, groupName);
+            return new ResponseEntity("ok", HttpStatus.OK);
+        }
+    }
+
+    // update user role
+    @RequestMapping(value = "/userRole/{userName}/{fromGroupName}/{toGroupName}", method = RequestMethod.PUT, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity changeUserRole(@PathVariable String userName, @PathVariable String fromGroupName, @PathVariable String toGroupName, HttpServletResponse response, Model model) throws Exception {
+        {
+            VcaUserRole.valueOf(fromGroupName.toUpperCase());
+            VcaUserRole.valueOf(toGroupName.toUpperCase());
+            vcaUserRoleService.updateUserRole(userName, fromGroupName, toGroupName);
+            VcaUser vcaUser = vcaUserRepo.findByUName(userName);
+            if (vcaUser == null) {
+                response.setStatus(HttpStatus.NOT_FOUND.value());
+                return null;
+            }
+            vcaUser.getRoles().add(toGroupName);
+            vcaUser.getRoles().remove(fromGroupName);
+            vcaUserRepo.save(vcaUser);
+            logger.info("User {} role {} changed to {} ", userName, fromGroupName, toGroupName);
             return new ResponseEntity("ok", HttpStatus.OK);
         }
     }
 
     @RequestMapping(value = "/userRole/{userName}", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity getUserRole(@PathVariable String userName, @PathVariable String groupName, HttpServletRequest request, Model model) throws Exception {
+    public ResponseEntity getUserRole(@PathVariable String userName, HttpServletRequest request, Model model) throws Exception {
         {
 
             VcaUserRole vcaUserRole = vcaUserRoleService.getUserRole(userName);
             return new ResponseEntity(vcaUserRole, HttpStatus.OK);
         }
     }
+
     @RequestMapping(value = "/userRoles/{userName}", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity getUserRoles(@PathVariable String userName, @PathVariable String groupName, HttpServletRequest request, Model model) throws Exception {
+    public ResponseEntity getUserRoles(@PathVariable String userName, HttpServletRequest request, Model model) throws Exception {
         {
 
             List<VcaUserRole> vcaUserRoles = vcaUserRoleService.getUserRoles(userName);

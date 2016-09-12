@@ -14,6 +14,6 @@ public interface VcaUserRolesService {
     List<AdUserRole> getRoles();
     EnumMap<VcaUserRole, AdUserRole> getUserRoleMap();
 
-    @Cacheable(key = "", sync = true, cacheNames = {"userRoleCache"})
+//    @Cacheable(key = "", sync = true, cacheNames = {"userRoleCache"})
     String getUserRoleOid(String roleName);
 }

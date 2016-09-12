@@ -2,9 +2,8 @@ package org.nbme.vca.users.config;
 
 import org.nbme.vca.users.VcaUsersApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.support.SpringBootServletInitializer;
 
-public class ServletInitializer extends SpringBootServletInitializer {
+public class ServletInitializer extends org.springframework.boot.context.web.SpringBootServletInitializer {
 
 	@Override
 	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
